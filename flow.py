@@ -1,4 +1,4 @@
-
+"""
 # coding: utf-8
 
 # In[1]:
@@ -224,14 +224,18 @@ def RNNCustom(BATCH_SIZE = 32, input_dim = 100,Hidden_Layer_Size= 64,timesteps=8
     return model
 
 
-def binaryPSO(f,dimensions,n_particles,print_step,iters,epochs,options= {'c1': 0.5, 'c2': 0.5, 'w':0.9, 'k': 10, 'p':2},verbose=2):
-    optimizer = ps.discrete.BinaryPSO(n_particles=20, dimensions=dimensions, options=options)
+#def binaryPSO(f,dimensions,n_particles,print_step,iters,epochs,options= {'c1': 0.5, 'c2': 0.5, 'w':0.9, 'k': 10, 'p':2},verbose=2):
+#    optimizer = ps.discrete.BinaryPSO(n_particles=20, dimensions=dimensions, options=options)
+#    cost, pos = optimizer.optimize(f, print_step=print_step, iters=iters, verbose=verbose)
+#    return cost,pos
+
+def binaryPSO(f,dimensions,n_particles,print_step,iters,epochs,options= {'c1': 0.5, 'c2': 0.5, 'w':0.9, 'k': 2, 'p':2},verbose=2):
+    optimizer = ps.discrete.BinaryPSO(n_particles=2, dimensions=dimensions, options=options)
     cost, pos = optimizer.optimize(f, print_step=print_step, iters=iters, verbose=verbose)
     return cost,pos
 
 
-
-def create_fit(X,Y,X_test,Y_test,dimensions,alpha=0.5,NUM_EPOCHS = 10):
+def create_fit(X,Y,X_test,Y_test,dimensions,alpha=0.5,NUM_EPOCHS = 1): #10):
     
     def fit_per_particle(m,alpha):
         print("m:")
@@ -276,32 +280,177 @@ def create_fit(X,Y,X_test,Y_test,dimensions,alpha=0.5,NUM_EPOCHS = 10):
 
 
 def singlePSO(X,Y,Xtest,Ytest,MAX_SENTENCE_LENGTH):
-    fit = create_fit(X=Xtrain,Y=Ytrain,X_test=Xtest,Y_test=Ytest,dimensions=MAX_SENTENCE_LENGTH,alpha=0.5)
+    fit = create_fit(X=X,Y=Y,X_test=Xtest,Y_test=Ytest,dimensions=MAX_SENTENCE_LENGTH,alpha=0.5)
     print(fit)
-    cost,pos = binaryPSO(f=fit,dimensions=MAX_SENTENCE_LENGTH,n_particles=3,print_step=100,iters=5,epochs=3)
+    #cost,pos = binaryPSO(f=fit,dimensions=MAX_SENTENCE_LENGTH,n_particles=3,print_step=100,iters=5,epochs=3)
+    cost,pos = binaryPSO(f=fit,dimensions=MAX_SENTENCE_LENGTH,n_particles=1,print_step=100,iters=1,epochs=1)
     print(cost)
-    #return cost,pos
+    return cost,pos
 
+
+
+def shrink(data,hit):
+    shrinkedList = []
+    for i in range(0,len(hit)):
+        if i>len(data):
+            return shrinkedList
+        if hit[i]!=0:
+            shrinkedList.append(data[i])
+    return shrinkedList
 
 # In[ ]:
 
+def prePSO(df,bin):
+    relevent = df[df.bin==bin]
+    vec = relevent.vector
+    labe= relevent.Y
+    maxSize = max(relevent.lengths)
+    
+    X = sequence.pad_sequences(vec, maxlen=maxSize, value = np.zeros(100))
+    #Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, labe, test_size=0.2,random_state=42)
+    Xtrain, Xtest, Ytrain, Ytest = train_test_split(X[:2], labe[:2], test_size=0.2,random_state=42)
+    
+    cost,pos =singlePSO(Xtrain, Ytrain,Xtest, Ytest, maxSize)
+    #shrinked =np.array([shrink(x,pos) for x in X)
+    shrinked =np.array([shrink(x,pos) for x in X[:2]])
+    model = RNNCustom(timesteps=len(shrinked[0]))#RNNCustom(VOCAB_SIZE=vocab_size,EMBEDDING_SIZE=EMBEDDING_SIZE,MAX_SENTENCE_LENGTH=m.sum())
+    #model.fit(X, labe,epochs=10)
+    #model.fit([shrink(x,pos) for x in X, labe,epochs=10)
+    
+    print(shrinked)
+    #model.fit(shrinked , labe,epochs=10)
+    model.fit(shrinked , labe[:2],epochs=1)
+    
+    return cost,pos,model,maxSize
 
+
+# In[1]:
+
+
+def allPSO(df,binInsex):
+    all=[]
+    for i in range (len(binInsex)):
+        all.append(prePSO(df,i))
+    return all
+
+
+
+alls =allPSO(df,binInsex)   # [(cost, pso, model, max),.....]
+
+print(alls)
+
+
+
+
+def predictionColumn(vector,alls):
+    predictions=[] #~
+    for cost,pos,model,origMax in alls:
+        padded = sequence.pad_sequences([vector], maxlen=origMax,value = np.zeros(100))[0]
+        masked = shrink(padded,pos)
+        prediction =model.predict(np.array([masked]))[0]
+        predictions.append(prediction)#~
+    predictions = [p[0] for p in predictions]
+    return predictions
+    
+df['predictions'] =df[:2].vector.apply(predictionColumn,args=(alls,))
+
+"""
+
+
+
+def Perceptron(InputTrain, LabelsTrain, InputTest, LabelsTest,
+        FLayerSize = 128,BATCH_SIZE = 32,NUM_EPOCHS = 10,
+        ACTIVATION=Activation("sigmoid"),LOSS="binary_crossentropy",OPTIMIZER='nadam',METRICS=["accuracy"]):
+    print(FLayerSize)
+    model = Sequential([Dense(1,input_shape=(FLayerSize,)),ACTIVATION])
+    #model.add(Dense(1,input_shape=(BATCH_SIZE,FLayerSize)))#model.add(keras.engine.input_layer.Input((FLayerSize))) model.add(Dense(1))
+    #model.add(ACTIVATION)
+    model.compile(loss=LOSS, optimizer=OPTIMIZER,metrics=METRICS)
+    print(InputTrain)
+    print(model.summary())
+    history = model.fit(InputTrain, LabelsTrain, batch_size=BATCH_SIZE,epochs=NUM_EPOCHS,validation_data=(InputTest, LabelsTest))
+    return model
+
+#model.fit(np.array([[1,2,3,4,5,6]]),[0])
+
+
+X = np.array([row.predictions+[row.lengths] for _,row in df[:2].iterrows()])
+
+Xtrain, Xtest, Ytrain, Ytest = train_test_split(X[:2], df.Y[:2], test_size=0.2,random_state=42)
+Xtrain = np.array(Xtrain)
+Xtest = np.array(Xtest)
+Ytrain = np.array(Ytrain)
+Ytest = np.array(Ytest)
+
+perModel =  Perceptron(Xtrain, Ytrain, Xtest, Ytest,len(alls)+1,BATCH_SIZE=1)
+
+
+
+
+
+
+
+
+"""
+def preproccess(df,alls):
+    duckingAll = []
+    for i,row in df[:2].iterrows():
+        predictions=[] #~
+        for cost,pos,model,origMax in alls:
+            padded = sequence.pad_sequences([row.vector], maxlen=origMax,value = np.zeros(100))[0]
+            masked = shrink(padded,pos)
+            prediction =model.predict(np.array([masked]))[0]
+            predictions.append(prediction)#~
+        duckingAll.append(predictions)
+        #df.at[i,'predictions']=pd.Series(predictions)#~
+        predictions = [p[0] for p in predictions]
+        #print(predictions)
+        #df.iat[i,'predictions']=predictions
+        
+    duckingAll.extend([0]*(len(df)-2))
+    #df['predictions']= duckingAll
+
+preproccess(df,alls)
+"""
+
+
+
+
+
+
+
+
+#df = df.drop(['predictions'],axis=1)
+#df['predictions']
+
+#df['classified']=[ alls[row.bin][2].predict(sequence.pad_sequences([row.vector], maxlen=alls[row.bin][3])) for _,row in df[:2].iterrows()]
+
+#save all max
+#pad to all max
+#add rnn to input
+
+
+
+
+"""
 relevent = df[df.bin==0]
 vec = relevent.vector
 labe= relevent.Y
 maxSize = max(relevent.lengths)
 
-
 X = sequence.pad_sequences(vec, maxlen=maxSize)
-Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, labe, test_size=0.2,random_state=42)
-
-
+#Xtrain, Xtest, Ytrain, Ytest = train_test_split(X, labe, test_size=0.2,random_state=42)
+Xtrain, Xtest, Ytrain, Ytest = train_test_split(X[:2], labe[:2], test_size=0.2,random_state=42)
 
 cost,pos =singlePSO(Xtrain, Ytrain,Xtest, Ytest, maxSize)
 
+shrinked =np.array([shrink(x,pos) for x in X[:2]])
+model = RNNCustom(timesteps=maxSize)#RNNCustom(VOCAB_SIZE=vocab_size,EMBEDDING_SIZE=EMBEDDING_SIZE,MAX_SENTENCE_LENGTH=m.sum())
+#model.fit(X, labe,epochs=10)
+#model.fit([shrink(x,pos) for x in X, labe,epochs=10)
 
-# In[1]:
-
+model.fit(shrinked , labe[:2],epochs=1)
+"""
 
 
 
