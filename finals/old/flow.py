@@ -217,7 +217,7 @@ def singlePSO(X,Y,Xtest,Ytest,MAX_SENTENCE_LENGTH):
 def shrink(data,hit):
     shrinkedList = []
     for i in range(0,len(hit)):
-        if i>len(data):
+        if i>=len(data):
             return shrinkedList
         if hit[i]!=0:
             shrinkedList.append(data[i])
