@@ -17,8 +17,9 @@ To run the train please run the following:
 This project uses glove's database
 
 please download it from https://nlp.stanford.edu/projects/glove/   (we used this version http://nlp.stanford.edu/data/glove.6B.zip) 
+Please make sure that the glove file is in the same folder as the python script.
 
-make sure the training or test files are in the same folder as the python script
+make sure the training or test files are in the same folder as the python script.
 
 ##returns
 
