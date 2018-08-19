@@ -1,7 +1,7 @@
 # sentiment-analysis-proj
 NLP project
 This project is for the course 22933 introduction to NLP in the open university of israel
-This project was created by Elad Beran and Elad Shoham
+This project was created by Elad Biran and Elad Shoham
 
 ##how to run. 
 
