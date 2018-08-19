@@ -81,11 +81,12 @@ conda install -c auto pyswarm
 please note that this is a heavy project for the computer. You might need a small corpus, a lot of running time, and a 64bit computer (for tensorFlow).
 
 
-## about the folders
+## about the folders and files
 in finals there are 4 folders. 
 old: our old model with a static alpha
 new: our new model with dynamic alpha
 baseline50000: the baseline trained on 50,000 sentences
 baseline10000: the baseline trained on 10,000 sentences
+sample_200_test.ft.txt - a file of 200 test samples to run tests on.
 
 each folder has other files in it. they are the models and other data needed. This means you can run the test without training.
