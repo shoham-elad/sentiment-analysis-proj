@@ -1,10 +1,10 @@
 #!/bin/bash
 #train/test data num_of_rows
-if [$1 = 'train']
+if [ $1 = 'train' ]
 then
 	python flow.py $2 $3
 else
-	if [$1 = 'test']
+	if [ $1 = 'test' ]
 	then
 		python testFlow.py $2 $3
 	else 
